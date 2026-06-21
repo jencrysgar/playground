@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Lightbulb } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
-import { getPrompts, tagsFor } from "@/lib/content";
+import { getPrompts, tagsFor, promptUsageFor } from "@/lib/content";
 import { Card, PageHeader, TagPill, EmptyState } from "@/components/ui";
-import { CopyButton } from "@/components/app/copy-button";
+import { PromptCopyButton } from "@/components/app/prompt-actions";
 
 export default async function PromptsPage() {
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
   const prompts = await getPrompts(role);
   const tagMap = await tagsFor("prompt", prompts.map((p) => p.id));
+  const usage = await promptUsageFor(user.id, prompts.map((p) => p.id));
 
   return (
     <div>
@@ -33,13 +35,18 @@ export default async function PromptsPage() {
               <p className="line-clamp-2 rounded-xl glass-2 p-3 font-mono text-xs text-muted">
                 {p.body}
               </p>
-              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
-                <div className="flex flex-wrap gap-1.5">
-                  {(tagMap[p.id] ?? []).map((t) => (
-                    <TagPill key={t.id} name={t.name} color={t.color} />
-                  ))}
-                </div>
-                <CopyButton text={p.body} label="Copy" size="sm" />
+              <div className="flex flex-wrap gap-1.5">
+                {(tagMap[p.id] ?? []).map((t) => (
+                  <TagPill key={t.id} name={t.name} color={t.color} />
+                ))}
+              </div>
+              <div className="mt-auto pt-1">
+                <PromptCopyButton
+                  promptId={p.id}
+                  text={p.body}
+                  initialCount={usage[p.id] ?? 0}
+                  label="Copy prompt"
+                />
               </div>
             </Card>
           ))}

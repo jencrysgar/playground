@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { Lightbulb } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
-import { getPrompt } from "@/lib/content";
+import { getPrompt, promptUsageFor } from "@/lib/content";
 import { PageHeader } from "@/components/ui";
-import { CopyButton } from "@/components/app/copy-button";
-import { OpenInLLM } from "@/components/app/open-in-llm";
+import { PromptDetailActions } from "@/components/app/prompt-actions";
 import { FavoriteInline, PageNote } from "@/components/app/page-personal";
 
 export default async function PromptDetailPage({
@@ -13,10 +12,12 @@ export default async function PromptDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
   const prompt = await getPrompt(slug, role);
   if (!prompt) notFound();
   const path = `/prompts/${prompt.slug}`;
+  const usage = await promptUsageFor(user.id, [prompt.id]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,10 +34,11 @@ export default async function PromptDetailPage({
         </pre>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <CopyButton text={prompt.body} label="Copy prompt" />
-        <OpenInLLM text={prompt.body} />
-      </div>
+      <PromptDetailActions
+        promptId={prompt.id}
+        text={prompt.body}
+        initialCount={usage[prompt.id] ?? 0}
+      />
 
       <PageNote path={path} title={prompt.title} />
     </div>

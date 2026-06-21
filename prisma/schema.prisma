@@ -34,6 +34,7 @@ model User {
   favorites      Favorite[]
   notes          Note[]
   links          Link[]
+  promptUsages   PromptUsage[]
 }
 
 model Session {
@@ -105,12 +106,25 @@ model Skill {
 }
 
 model Prompt {
-  id          String @id @default(cuid())
-  slug        String @unique
+  id          String        @id @default(cuid())
+  slug        String        @unique
   title       String
   description String
   body        String
-  accessRole  String @default("USER")
+  accessRole  String        @default("USER")
+  usages      PromptUsage[]
+}
+
+model PromptUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, promptId])
 }
 
 model Agent {

@@ -85,6 +85,20 @@ export async function getPrompts(role: Role) {
     orderBy: { title: "asc" },
   });
 }
+
+/** Map of promptId -> usage count for a specific user. */
+export async function promptUsageFor(
+  userId: string,
+  promptIds: string[],
+): Promise<Record<string, number>> {
+  if (promptIds.length === 0) return {};
+  const usages = await prisma.promptUsage.findMany({
+    where: { userId, promptId: { in: promptIds } },
+  });
+  const map: Record<string, number> = {};
+  for (const u of usages) map[u.promptId] = u.count;
+  return map;
+}
 export async function getPrompt(slug: string, role: Role) {
   const p = await prisma.prompt.findUnique({ where: { slug } });
   if (!p || !canAccess(role, p.accessRole)) return null;
