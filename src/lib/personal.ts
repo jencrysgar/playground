@@ -16,3 +16,18 @@ export async function getPagePersonal(path: string) {
   ]);
   return { favorited: Boolean(favorite), note: note?.content ?? "" };
 }
+
+/** The current user's personalized copy of a prompt/skill prompt, if any. */
+export async function getUserPromptCopy(
+  targetType: "prompt" | "skill",
+  targetId: string,
+): Promise<string | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const copy = await prisma.userPromptCopy.findUnique({
+    where: {
+      userId_targetType_targetId: { userId: user.id, targetType, targetId },
+    },
+  });
+  return copy?.content ?? null;
+}

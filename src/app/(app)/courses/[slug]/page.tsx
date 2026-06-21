@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GraduationCap, BookOpen } from "lucide-react";
+import { GraduationCap, BookOpen, Clock, ListChecks } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getCourse } from "@/lib/content";
-import { PageHeader, Card } from "@/components/ui";
+import { canEditContent } from "@/lib/permissions";
+import { PageHeader, Card, Section, Prose, BulletList } from "@/components/ui";
 import { FavoriteInline, PageNote } from "@/components/app/page-personal";
+import { EditBar } from "@/components/edit/content-controls";
 
 export default async function CourseDetailPage({
   params,
@@ -12,11 +14,13 @@ export default async function CourseDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
   const course = await getCourse(slug, role);
   if (!course) notFound();
-
   const path = `/courses/${course.slug}`;
+  const canEdit = canEditContent(user.role);
+  const lessonCount = course.modules.reduce((n, m) => n + m.lessons.length, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,8 +28,30 @@ export default async function CourseDetailPage({
         title={course.title}
         description={course.description}
         icon={<GraduationCap className="h-5 w-5" />}
-        actions={<FavoriteInline path={path} title={course.title} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <FavoriteInline path={path} title={course.title} />
+            {canEdit && <EditBar editHref={`${path}/edit`} type="course" id={course.id} />}
+          </div>
+        }
       />
+
+      <div className="flex flex-wrap gap-2">
+        <Meta icon={<Clock className="h-4 w-4" />} label={course.length || `${lessonCount} lessons`} />
+        <Meta icon={<BookOpen className="h-4 w-4" />} label={`${course.modules.length} modules · ${lessonCount} lessons`} />
+        <Meta icon={<ListChecks className="h-4 w-4" />} label={course.level} />
+      </div>
+
+      {course.outcomes && (
+        <Section title="What you'll learn">
+          <BulletList text={course.outcomes} />
+        </Section>
+      )}
+      {course.prerequisites && (
+        <Section title="Prerequisites">
+          <Prose text={course.prerequisites} />
+        </Section>
+      )}
 
       <div className="flex flex-col gap-4">
         {course.modules.map((m, i) => (
@@ -49,6 +75,9 @@ export default async function CourseDetailPage({
                   </Link>
                 </li>
               ))}
+              {m.lessons.length === 0 && (
+                <li className="px-3 py-2 text-sm text-muted">No lessons yet.</li>
+              )}
             </ul>
           </Card>
         ))}
@@ -56,5 +85,14 @@ export default async function CourseDetailPage({
 
       <PageNote path={path} title={course.title} />
     </div>
+  );
+}
+
+function Meta({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-xl glass-2 px-3 py-1.5 text-sm text-foreground/80">
+      <span className="text-primary">{icon}</span>
+      {label}
+    </span>
   );
 }

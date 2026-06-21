@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasRole } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { PageHeader } from "@/components/ui";
-import { UserRoleSelect } from "@/components/admin/user-role-select";
+import { UserEditor } from "@/components/admin/user-editor";
 
 export default async function AdminUsersPage() {
   const me = (await getCurrentUser())!;
@@ -34,7 +34,7 @@ export default async function AdminUsersPage() {
                 <p className="text-sm text-muted">{u.email}</p>
               </div>
             </div>
-            <UserRoleSelect userId={u.id} role={u.role} disabled={u.id === me.id} />
+            <UserEditor userId={u.id} name={u.name} role={u.role} isSelf={u.id === me.id} />
           </div>
         ))}
       </div>

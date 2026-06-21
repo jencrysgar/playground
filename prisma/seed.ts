@@ -68,16 +68,21 @@ async function main() {
   }
 
   // Course -> Modules -> Lessons
+  const courseData = {
+    title: "Prompt Engineering Foundations",
+    description:
+      "Learn how to talk to large language models effectively, from first principles to advanced patterns.",
+    length: "About 2 hours · 3 lessons",
+    level: "Beginner",
+    outcomes:
+      "Understand how models interpret prompts\nWrite clear, structured prompts\nApply few-shot and chain-of-thought techniques\nIterate to reliably improve outputs",
+    prerequisites: "None — just curiosity and access to an AI chat tool.",
+    accessRole: "USER",
+  };
   const course = await prisma.course.upsert({
     where: { slug: "prompt-engineering-foundations" },
-    update: {},
-    create: {
-      slug: "prompt-engineering-foundations",
-      title: "Prompt Engineering Foundations",
-      description:
-        "Learn how to talk to large language models effectively, from first principles to advanced patterns.",
-      accessRole: "USER",
-    },
+    update: courseData,
+    create: { slug: "prompt-engineering-foundations", ...courseData },
   });
   await assign("Beginner", "course", course.id);
   await assign("Writing", "course", course.id);
@@ -155,16 +160,38 @@ async function main() {
       slug: "summarize-long-docs",
       title: "Summarize long documents",
       description: "Condense reports, papers, and transcripts without losing key points.",
-      content:
-        "Paste your document and ask for a layered summary: a one-line TL;DR, 3 key takeaways, and a bulleted detail list. Ask the model to flag anything uncertain.",
+      problem:
+        "Long documents take ages to read, and important details get buried. You need the gist fast without missing anything critical.",
+      whatYouGet:
+        "A layered summary: a one-line TL;DR, 3 key takeaways, and a bulleted detail list — plus flags on anything uncertain.",
+      howItWorks:
+        "The prompt asks the model to read for structure first, then compress in layers so you can drill from headline to detail.",
+      howToTrigger:
+        "Paste your document where indicated and send. Works best with documents under ~20 pages per message.",
+      worksWith: "ChatGPT, Claude, Gemini",
+      corePrompt:
+        "Summarize the following document in three layers:\n1) A one-sentence TL;DR.\n2) The 3 most important takeaways.\n3) A bulleted list of supporting details.\nFlag anything that seems uncertain or contradictory.\n\nDOCUMENT:\n{{paste your document here}}",
+      promptNotes:
+        "Replace {{paste your document here}} with your text. For very long docs, split into parts and summarize each, then summarize the summaries.",
       accessRole: "USER",
     },
     {
       slug: "code-review-assistant",
       title: "Code review assistant",
       description: "Get a second pair of eyes on a diff.",
-      content:
-        "Provide the diff and the surrounding context. Ask for correctness issues, edge cases, naming, and security concerns, ranked by severity.",
+      problem:
+        "Reviewing your own code is hard — you miss edge cases, security issues, and naming problems you're too close to see.",
+      whatYouGet:
+        "A prioritized review covering correctness, edge cases, naming, and security, ranked by severity with concrete suggestions.",
+      howItWorks:
+        "The prompt frames the model as a senior reviewer and asks for severity-ranked findings rather than vague feedback.",
+      howToTrigger:
+        "Paste your diff (and any relevant context) into the placeholder and send.",
+      worksWith: "ChatGPT, Claude",
+      corePrompt:
+        "You are a senior software engineer doing a code review. Review the following diff and list issues ranked by severity (Critical, High, Medium, Low). For each, give the problem and a concrete fix. Cover correctness, edge cases, naming, and security.\n\nCONTEXT:\n{{what this code does}}\n\nDIFF:\n{{paste your diff here}}",
+      promptNotes:
+        "Fill in {{what this code does}} and {{paste your diff here}}. Add your language/framework for sharper feedback.",
       accessRole: "EDITOR",
     },
   ];
@@ -183,24 +210,37 @@ async function main() {
       slug: "blog-post-outline",
       title: "Blog post outline",
       description: "Turn a topic into a structured outline.",
+      howToUse:
+        "Replace {{topic}} with your subject. Optionally tell the model your target audience and tone for a sharper outline.",
       body:
         "You are an expert content strategist. Create a detailed blog post outline about: {{topic}}. Include an SEO-friendly title, 5-7 H2 sections each with 2-3 bullet sub-points, and a short conclusion with a call to action.",
+      extraTitle: "What you'll get back",
+      extraContent:
+        "A ready-to-write outline: one SEO title, 5-7 sections with sub-points, and a CTA-driven conclusion you can flesh out into a full post.",
       accessRole: "USER",
     },
     {
       slug: "explain-like-im-five",
       title: "Explain like I'm five",
       description: "Simplify any concept.",
+      howToUse: "Replace {{concept}} with whatever you want explained simply.",
       body:
         "Explain the following concept as if to a curious five-year-old, using a simple everyday analogy, then give a one-sentence 'grown-up' version: {{concept}}",
+      extraTitle: "What you'll get back",
+      extraContent:
+        "A friendly analogy a child could follow, plus a precise one-line definition for grown-ups.",
       accessRole: "USER",
     },
     {
       slug: "sql-from-plain-english",
       title: "SQL from plain English",
       description: "Generate a query from a description.",
+      howToUse:
+        "Paste your table schema into {{schema}} and your question into {{question}}.",
       body:
         "Given this schema: {{schema}}. Write a single SQL query that answers: {{question}}. Explain each clause briefly.",
+      extraTitle: "",
+      extraContent: "",
       accessRole: "USER",
     },
   ];
@@ -213,22 +253,24 @@ async function main() {
     await assign(p.slug === "sql-from-plain-english" ? "Coding" : "Writing", "prompt", rec.id);
   }
 
-  // Agents
+  // Agents (external links to Custom GPTs / Claude Projects / etc.)
   const agents = [
     {
       slug: "research-analyst",
       title: "Research Analyst",
-      description: "An agent that gathers, synthesizes, and cites sources.",
-      content:
-        "System role for a research agent: define the question, search broadly, extract claims with citations, cross-check conflicting sources, and produce a briefing with confidence levels.",
+      description:
+        "A Custom GPT that gathers, synthesizes, and cites sources into a confidence-rated briefing.",
+      url: "https://chatgpt.com/gpts",
+      platform: "ChatGPT",
       accessRole: "USER",
     },
     {
       slug: "release-notes-writer",
       title: "Release Notes Writer",
-      description: "Transforms merged PRs into friendly release notes.",
-      content:
-        "Given a list of merged pull requests, group them into Features, Improvements, and Fixes. Write user-facing notes in plain language. Keep each entry to one sentence.",
+      description:
+        "A Claude Project that turns merged pull requests into friendly, grouped release notes.",
+      url: "https://claude.ai/projects",
+      platform: "Claude",
       accessRole: "EDITOR",
     },
   ];

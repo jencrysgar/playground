@@ -184,6 +184,53 @@ export function PageHeader({
   );
 }
 
+/** Renders multi-line plain text as paragraphs. */
+export function Prose({ text, className }: { text: string; className?: string }) {
+  const paras = text.split("\n").filter((p) => p.trim().length > 0);
+  return (
+    <div className={cn("text-[15px] leading-relaxed text-foreground/90", className)}>
+      {paras.map((p, i) => (
+        <p key={i} className="mb-3 last:mb-0">
+          {p}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** Renders multi-line text as a bulleted list (one item per line). */
+export function BulletList({ text }: { text: string }) {
+  const items = text.split("\n").map((t) => t.trim()).filter(Boolean);
+  if (items.length === 0) return null;
+  return (
+    <ul className="flex flex-col gap-2">
+      {items.map((it, i) => (
+        <li key={i} className="flex items-start gap-2 text-[15px] text-foreground/90">
+          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+          {it}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="glass glow rounded-2xl p-6">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 export function EmptyState({
   title,
   description,

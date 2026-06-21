@@ -35,6 +35,7 @@ model User {
   notes          Note[]
   links          Link[]
   promptUsages   PromptUsage[]
+  promptCopies   UserPromptCopy[]
 }
 
 model Session {
@@ -62,13 +63,17 @@ model Authenticator {
 // ----- Content -----
 
 model Course {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  description String
-  accessRole  String   @default("USER") // minimum role required to view
-  createdAt   DateTime @default(now())
-  modules     Module[]
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String
+  length        String   @default("") // e.g. "3 hours", "6 lessons"
+  level         String   @default("Beginner") // Beginner | Intermediate | Advanced
+  outcomes      String   @default("") // what you'll learn, one item per line
+  prerequisites String   @default("")
+  accessRole    String   @default("USER") // minimum role required to view
+  createdAt     DateTime @default(now())
+  modules       Module[]
 }
 
 model Module {
@@ -97,22 +102,31 @@ model Lesson {
 }
 
 model Skill {
-  id          String @id @default(cuid())
-  slug        String @unique
-  title       String
-  description String
-  content     String
-  accessRole  String @default("USER")
+  id           String @id @default(cuid())
+  slug         String @unique
+  title        String
+  description  String
+  problem      String @default("") // the problem this skill solves
+  whatYouGet   String @default("") // what you get out of it
+  howItWorks   String @default("")
+  howToTrigger String @default("") // how to trigger / invoke it
+  worksWith    String @default("") // comma list: ChatGPT, Claude, Gemini…
+  corePrompt   String @default("") // the copy/paste core prompt
+  promptNotes  String @default("") // notes about customizing the prompt
+  accessRole   String @default("USER")
 }
 
 model Prompt {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  title       String
-  description String
-  body        String
-  accessRole  String        @default("USER")
-  usages      PromptUsage[]
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  title        String
+  description  String
+  howToUse     String        @default("")
+  body         String // the copy/paste prompt
+  extraTitle   String        @default("") // optional admin section, e.g. "What you'll get back"
+  extraContent String        @default("")
+  accessRole   String        @default("USER")
+  usages       PromptUsage[]
 }
 
 model PromptUsage {
@@ -132,8 +146,22 @@ model Agent {
   slug        String @unique
   title       String
   description String
-  content     String
+  url         String @default("") // external link to a Custom GPT / Claude Project / etc.
+  platform    String @default("") // e.g. ChatGPT, Claude
   accessRole  String @default("USER")
+}
+
+// A user's personalized copy of a prompt or a skill's core prompt.
+model UserPromptCopy {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType String // "prompt" | "skill"
+  targetId   String
+  content    String
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, targetType, targetId])
 }
 
 // ----- Tags (admin-managed, assignable to any content/page) -----

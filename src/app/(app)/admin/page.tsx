@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Users, Tags, StickyNote } from "lucide-react";
+import { Users, Tags, StickyNote, ShieldCheck } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { hasRole } from "@/lib/permissions";
+import { hasRole, ROLE_CAPABILITIES, ROLE_LABELS, type Role } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, PageHeader, Section } from "@/components/ui";
 
 export default async function AdminOverviewPage() {
   const user = (await getCurrentUser())!;
@@ -21,8 +21,10 @@ export default async function AdminOverviewPage() {
     { href: "/admin/notes", label: "Notes", value: noteCount, icon: StickyNote, desc: "See what members find useful", show: isAdmin },
   ].filter((c) => c.show);
 
+  const roles: Role[] = ["USER", "EDITOR", "ADMIN"];
+
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Admin"
         description="Manage users, tags, and review member notes."
@@ -41,6 +43,27 @@ export default async function AdminOverviewPage() {
           </Link>
         ))}
       </div>
+
+      <Section title="What each role can do">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {roles.map((r) => (
+            <div key={r} className="rounded-xl glass-2 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold">{ROLE_LABELS[r]}</h3>
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {ROLE_CAPABILITIES[r].map((cap) => (
+                  <li key={cap} className="flex items-start gap-2 text-sm text-foreground/85">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
+                    {cap}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }

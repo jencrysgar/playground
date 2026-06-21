@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, BookOpen } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getLesson } from "@/lib/content";
-import { PageHeader } from "@/components/ui";
+import { canEditContent } from "@/lib/permissions";
+import { PageHeader, LinkButton } from "@/components/ui";
 import { FavoriteInline, PageNote } from "@/components/app/page-personal";
 
 export default async function LessonPage({
@@ -12,7 +13,9 @@ export default async function LessonPage({
   params: Promise<{ slug: string; module: string; lesson: string }>;
 }) {
   const { slug, module: moduleSlug, lesson: lessonSlug } = await params;
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
+  const canEdit = canEditContent(user.role);
   const data = await getLesson(slug, moduleSlug, lessonSlug, role);
   if (!data) notFound();
   const { course, module: mod, lesson } = data;
@@ -32,7 +35,16 @@ export default async function LessonPage({
         title={lesson.title}
         description={`${mod.title} · ${course.title}`}
         icon={<BookOpen className="h-5 w-5" />}
-        actions={<FavoriteInline path={path} title={lesson.title} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <FavoriteInline path={path} title={lesson.title} />
+            {canEdit && (
+              <LinkButton href={`/courses/${slug}/edit`} variant="secondary" size="sm">
+                Edit in course editor
+              </LinkButton>
+            )}
+          </div>
+        }
       />
 
       <article className="glass glow rounded-2xl p-6 text-[15px] leading-relaxed text-foreground/90">
