@@ -5,37 +5,37 @@
 
 :root {
   /* Light theme */
-  --background: #f6f5fb;
+  --background: #f3f0fc;
   --surface: #ffffff;
-  --surface-2: #faf9ff;
-  --foreground: #1c1530;
-  --muted: #6b6580;
-  --border: rgba(124, 58, 237, 0.14);
-  --primary: #7c3aed;
+  --surface-2: #f8f6ff;
+  --foreground: #1a1230;
+  --muted: #675f80;
+  --border: rgba(124, 58, 237, 0.16);
+  --primary: #6d28d9;
   --primary-foreground: #ffffff;
-  --accent-pink: #ec4899;
-  --accent-blue: #3b82f6;
-  --ring: rgba(124, 58, 237, 0.45);
-  --halo-1: rgba(124, 58, 237, 0.22);
-  --halo-2: rgba(236, 72, 153, 0.18);
-  --halo-3: rgba(59, 130, 246, 0.16);
+  --accent-pink: #db2777;
+  --accent-blue: #4f46e5;
+  --ring: rgba(109, 40, 217, 0.5);
+  --halo-1: rgba(124, 58, 237, 0.28);
+  --halo-2: rgba(217, 70, 239, 0.22);
+  --halo-3: rgba(79, 70, 229, 0.2);
 }
 
 .dark {
-  --background: #0a0712;
-  --surface: rgba(26, 20, 43, 0.72);
-  --surface-2: rgba(36, 27, 58, 0.6);
-  --foreground: #ece9f5;
-  --muted: #a59fc0;
-  --border: rgba(168, 130, 255, 0.16);
-  --primary: #a855f7;
-  --primary-foreground: #14091f;
+  --background: #090514;
+  --surface: rgba(28, 20, 48, 0.74);
+  --surface-2: rgba(40, 28, 66, 0.62);
+  --foreground: #efebfa;
+  --muted: #a9a2c8;
+  --border: rgba(178, 140, 255, 0.2);
+  --primary: #b06bff;
+  --primary-foreground: #15081f;
   --accent-pink: #f472b6;
-  --accent-blue: #60a5fa;
-  --ring: rgba(168, 85, 247, 0.55);
-  --halo-1: rgba(124, 58, 237, 0.38);
-  --halo-2: rgba(236, 72, 153, 0.3);
-  --halo-3: rgba(59, 130, 246, 0.28);
+  --accent-blue: #818cf8;
+  --ring: rgba(176, 107, 255, 0.62);
+  --halo-1: rgba(139, 92, 246, 0.5);
+  --halo-2: rgba(217, 70, 239, 0.38);
+  --halo-3: rgba(99, 102, 241, 0.34);
 }
 
 @theme inline {
@@ -79,14 +79,14 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -20% -10% auto -10%;
-  height: 80vh;
+  inset: -25% -10% auto -10%;
+  height: 90vh;
   z-index: -1;
   background:
-    radial-gradient(40% 50% at 20% 15%, var(--halo-1), transparent 70%),
-    radial-gradient(35% 45% at 85% 10%, var(--halo-2), transparent 70%),
-    radial-gradient(45% 55% at 60% 30%, var(--halo-3), transparent 75%);
-  filter: blur(20px);
+    radial-gradient(42% 52% at 18% 12%, var(--halo-1), transparent 72%),
+    radial-gradient(38% 48% at 86% 8%, var(--halo-2), transparent 72%),
+    radial-gradient(48% 58% at 62% 28%, var(--halo-3), transparent 76%);
+  filter: blur(24px);
   pointer-events: none;
 }
 
@@ -106,20 +106,22 @@ body::before {
   .glow {
     box-shadow:
       0 0 0 1px var(--border),
-      0 10px 40px -12px var(--halo-1),
-      0 4px 16px -8px rgba(0, 0, 0, 0.25);
+      0 14px 50px -12px var(--halo-1),
+      0 6px 22px -10px var(--halo-2),
+      0 4px 16px -8px rgba(0, 0, 0, 0.28);
   }
   .glow-hover {
     transition:
       transform 0.2s ease,
-      box-shadow 0.3s ease;
+      box-shadow 0.35s ease;
   }
   .glow-hover:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     box-shadow:
       0 0 0 1px var(--ring),
-      0 18px 50px -14px var(--halo-1),
-      0 8px 24px -10px var(--halo-2);
+      0 24px 64px -14px var(--halo-1),
+      0 12px 32px -10px var(--halo-2),
+      0 0 24px -6px var(--halo-3);
   }
   .text-gradient {
     background: linear-gradient(
@@ -138,8 +140,9 @@ body::before {
   }
   .halo-btn {
     box-shadow:
-      0 8px 24px -8px var(--halo-1),
-      0 2px 8px -2px var(--halo-2);
+      0 10px 30px -8px var(--halo-1),
+      0 4px 14px -4px var(--halo-2),
+      0 0 18px -4px var(--halo-1);
   }
 }
 
