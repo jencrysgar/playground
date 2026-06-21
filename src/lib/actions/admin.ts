@@ -33,6 +33,27 @@ export async function setUserRole(userId: string, role: string) {
   return { ok: true };
 }
 
+export async function updateUser(
+  userId: string,
+  data: { name?: string; role?: string },
+): Promise<{ ok?: boolean; error?: string }> {
+  const admin = await requireAdmin();
+  const patch: { name?: string; role?: string } = {};
+  if (typeof data.name === "string" && data.name.trim()) {
+    patch.name = data.name.trim();
+  }
+  if (typeof data.role === "string") {
+    if (!isRole(data.role)) return { error: "Invalid role" };
+    if (userId === admin.id && data.role !== "ADMIN") {
+      return { error: "You cannot change your own admin role." };
+    }
+    patch.role = data.role;
+  }
+  await prisma.user.update({ where: { id: userId }, data: patch });
+  revalidatePath("/admin/users");
+  return { ok: true };
+}
+
 export async function createTag(name: string, color: string) {
   await requireEditor();
   const clean = name.trim();

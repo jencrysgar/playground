@@ -168,7 +168,10 @@ export async function search(
     }
   }
   for (const s of skills) {
-    if (matchText(s.title, s.description, s.content) && matchTag("skill", s.id)) {
+    if (
+      matchText(s.title, s.description, s.problem, s.whatYouGet, s.corePrompt) &&
+      matchTag("skill", s.id)
+    ) {
       results.push({ type: "skill", id: s.id, title: s.title, description: s.description, href: `/skills/${s.slug}`, tags: tagMaps.skill[s.id] ?? [] });
     }
   }
@@ -178,7 +181,10 @@ export async function search(
     }
   }
   for (const a of agents) {
-    if (matchText(a.title, a.description, a.content) && matchTag("agent", a.id)) {
+    if (
+      matchText(a.title, a.description, a.platform) &&
+      matchTag("agent", a.id)
+    ) {
       results.push({ type: "agent", id: a.id, title: a.title, description: a.description, href: `/agents/${a.slug}`, tags: tagMaps.agent[a.id] ?? [] });
     }
   }

@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { GraduationCap, Layers } from "lucide-react";
+import { GraduationCap, Layers, Plus } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getCourses, tagsFor } from "@/lib/content";
-import { Card, PageHeader, TagPill, EmptyState } from "@/components/ui";
+import { canEditContent } from "@/lib/permissions";
+import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 
 export default async function CoursesPage() {
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
+  const canEdit = canEditContent(user.role);
   const courses = await getCourses(role);
   const tagMap = await tagsFor("course", courses.map((c) => c.id));
 
@@ -15,6 +18,13 @@ export default async function CoursesPage() {
         title="Courses"
         description="Structured learning paths made of modules and lessons."
         icon={<GraduationCap className="h-5 w-5" />}
+        actions={
+          canEdit ? (
+            <LinkButton href="/courses/new" size="sm">
+              <Plus className="h-4 w-4" /> New course
+            </LinkButton>
+          ) : undefined
+        }
       />
       {courses.length === 0 ? (
         <EmptyState title="No courses yet" description="Check back soon." />

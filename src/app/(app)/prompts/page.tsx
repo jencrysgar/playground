@@ -1,13 +1,15 @@
 import Link from "next/link";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Plus } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getPrompts, tagsFor, promptUsageFor } from "@/lib/content";
-import { Card, PageHeader, TagPill, EmptyState } from "@/components/ui";
+import { canEditContent } from "@/lib/permissions";
+import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 import { PromptCopyButton } from "@/components/app/prompt-actions";
 
 export default async function PromptsPage() {
   const user = (await getCurrentUser())!;
   const role = userRole(user);
+  const canEdit = canEditContent(user.role);
   const prompts = await getPrompts(role);
   const tagMap = await tagsFor("prompt", prompts.map((p) => p.id));
   const usage = await promptUsageFor(user.id, prompts.map((p) => p.id));
@@ -18,6 +20,13 @@ export default async function PromptsPage() {
         title="Prompts"
         description="A library of ready-to-use prompts. Copy or open them in your AI tool."
         icon={<Lightbulb className="h-5 w-5" />}
+        actions={
+          canEdit ? (
+            <LinkButton href="/prompts/new" size="sm">
+              <Plus className="h-4 w-4" /> New prompt
+            </LinkButton>
+          ) : undefined
+        }
       />
       {prompts.length === 0 ? (
         <EmptyState title="No prompts yet" />

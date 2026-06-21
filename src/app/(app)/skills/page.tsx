@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { Wand2 } from "lucide-react";
+import { Wand2, Plus } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getSkills, tagsFor } from "@/lib/content";
-import { Card, PageHeader, TagPill, EmptyState } from "@/components/ui";
+import { canEditContent } from "@/lib/permissions";
+import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 
 export default async function SkillsPage() {
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  const role = userRole(user);
+  const canEdit = canEditContent(user.role);
   const skills = await getSkills(role);
   const tagMap = await tagsFor("skill", skills.map((s) => s.id));
 
@@ -15,6 +18,13 @@ export default async function SkillsPage() {
         title="Skills"
         description="Reusable techniques to get more out of AI tools."
         icon={<Wand2 className="h-5 w-5" />}
+        actions={
+          canEdit ? (
+            <LinkButton href="/skills/new" size="sm">
+              <Plus className="h-4 w-4" /> New skill
+            </LinkButton>
+          ) : undefined
+        }
       />
       {skills.length === 0 ? (
         <EmptyState title="No skills yet" />
