@@ -6,9 +6,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Cursor Cloud specific instructions
 
-This is a Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 app. Source lives in `src/`. Standard scripts are in `package.json` (`dev`, `build`, `start`, `lint`).
+This is the **AI Knowledge Center**: a Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 app, with Prisma + SQLite for data. Source lives in `src/`. Standard scripts are in `package.json` (`dev`, `build`, `start`, `lint`, `db:push`, `db:seed`).
 
-- Dev server: `npm run dev` serves on `http://localhost:3000`. Use a tmux session for it so it survives between commands; it is not a foreground/blocking task to wait on.
-- The guestbook data store (`src/lib/messages.ts`) is **in-memory**, so all messages reset whenever the dev/build server restarts. This is expected — replace it with a real database before relying on persistence.
-- The home page (`src/app/page.tsx`) uses `export const dynamic = "force-dynamic"` so it always reflects the current in-memory messages on load; do not remove this unless you add real data fetching/caching.
-- Lint uses a flat config (`eslint.config.mjs`) and enforces React 19 rules, including `react-hooks/set-state-in-effect`. Avoid calling `setState` synchronously inside `useEffect`; prefer fetching initial data in a Server Component and passing it to a Client Component (see `page.tsx` → `guestbook.tsx`).
+**Services / how to run** (just one service — the Next.js app, frontend + backend together):
+- Dev server: `npm run dev` on `http://localhost:3000`. Run it in a tmux session so it survives between commands; it does not exit on its own (don't wait on it as a foreground task).
+- The update script runs `npm install` (which runs `prisma generate` via `postinstall`), then `prisma db push` and `prisma db seed`. So on a fresh session the SQLite DB at `prisma/dev.db` already exists and is seeded — you normally don't need to run those manually.
+
+**Non-obvious gotchas:**
+- **Database is SQLite** at `prisma/dev.db` (gitignored). The datasource URL is hardcoded in `prisma/schema.prisma` (no `.env` needed). After editing the schema, run `npm run db:push` (and re-seed if needed). The seed (`prisma/seed.ts`) is idempotent (upserts), so `npm run db:seed` is safe to re-run.
+- **Prisma is pinned to v6 on purpose.** Prisma 7 removed `url` from the schema and requires driver adapters + `prisma.config.ts`; do not bump to 7 without migrating that config.
+- **Demo accounts** (password `Password123!`): `admin@akc.dev` (ADMIN), `editor@akc.dev` (EDITOR), `member@akc.dev` (USER). The very first user to sign up becomes ADMIN.
+- **Auth/MFA**: custom cookie sessions (`src/lib/auth.ts`). A session is `mfaPending` after the password step until a second factor is verified. Passkeys/WebAuthn derive the RP ID + origin from the request host (`src/lib/webauthn.ts`), so they work on `localhost` in dev with no config. **SMS 2FA is mocked** — the code is printed to the **server console** (the tmux pane running `npm run dev`), not actually texted.
+- **Lint** (flat config `eslint.config.mjs`) enforces React 19 rules including `react-hooks/set-state-in-effect`. Prefer fetching data in Server Components and passing it to Client Components. The one legitimate exception (the next-themes mount guard in `src/components/theme-toggle.tsx`) uses a scoped `eslint-disable-next-line`.

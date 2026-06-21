@@ -1,0 +1,202 @@
+// Prisma schema for the AI Knowledge Center.
+// Uses SQLite for zero-config local development. The database file lives at
+// prisma/dev.db. Swap the datasource provider/url for Postgres in production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ----- Users, auth & MFA -----
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  passwordHash      String
+  role              String   @default("USER") // USER | EDITOR | ADMIN
+  defaultLanding    String   @default("/dashboard")
+  favoritesView     String   @default("CARD") // CARD | LIST
+  favoritesExpanded Boolean  @default(true)
+  theme             String   @default("system") // light | dark | system
+  totpSecret        String?
+  totpEnabled       Boolean  @default(false)
+  smsPhone          String?
+  smsEnabled        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  sessions       Session[]
+  authenticators Authenticator[]
+  favorites      Favorite[]
+  notes          Note[]
+  links          Link[]
+  promptUsages   PromptUsage[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mfaPending Boolean  @default(false) // true after password step until 2FA is verified
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model Authenticator {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String   @unique
+  publicKey    String // base64url-encoded
+  counter      Int      @default(0)
+  transports   String? // comma-separated
+  name         String   @default("Passkey")
+  createdAt    DateTime @default(now())
+}
+
+// ----- Content -----
+
+model Course {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  accessRole  String   @default("USER") // minimum role required to view
+  createdAt   DateTime @default(now())
+  modules     Module[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  slug        String
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  order       Int      @default(0)
+  lessons     Lesson[]
+
+  @@unique([courseId, slug])
+}
+
+model Lesson {
+  id       String @id @default(cuid())
+  slug     String
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title    String
+  content  String
+  order    Int    @default(0)
+
+  @@unique([moduleId, slug])
+}
+
+model Skill {
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  description String
+  content     String
+  accessRole  String @default("USER")
+}
+
+model Prompt {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  description String
+  body        String
+  accessRole  String        @default("USER")
+  usages      PromptUsage[]
+}
+
+model PromptUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, promptId])
+}
+
+model Agent {
+  id          String @id @default(cuid())
+  slug        String @unique
+  title       String
+  description String
+  content     String
+  accessRole  String @default("USER")
+}
+
+// ----- Tags (admin-managed, assignable to any content/page) -----
+
+model Tag {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  color       String          @default("purple")
+  createdAt   DateTime        @default(now())
+  assignments TagAssignment[]
+}
+
+model TagAssignment {
+  id         String @id @default(cuid())
+  tagId      String
+  tag        Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  entityType String // course | skill | prompt | agent | lesson | page
+  entityId   String // record id, or page path for arbitrary pages
+
+  @@unique([tagId, entityType, entityId])
+}
+
+// ----- Personalization -----
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path      String
+  title     String
+  kind      String   @default("page")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, path])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path      String
+  title     String   @default("")
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, path])
+}
+
+model Link {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url         String
+  title       String
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  tags        LinkTag[]
+}
+
+model LinkTag {
+  id     String @id @default(cuid())
+  linkId String
+  link   Link   @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  name   String
+}

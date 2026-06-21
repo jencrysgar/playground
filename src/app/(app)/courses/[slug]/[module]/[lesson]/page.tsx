@@ -1,0 +1,49 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ChevronLeft, BookOpen } from "lucide-react";
+import { getCurrentUser, userRole } from "@/lib/auth";
+import { getLesson } from "@/lib/content";
+import { PageHeader } from "@/components/ui";
+import { FavoriteInline, PageNote } from "@/components/app/page-personal";
+
+export default async function LessonPage({
+  params,
+}: {
+  params: Promise<{ slug: string; module: string; lesson: string }>;
+}) {
+  const { slug, module: moduleSlug, lesson: lessonSlug } = await params;
+  const role = userRole((await getCurrentUser())!);
+  const data = await getLesson(slug, moduleSlug, lessonSlug, role);
+  if (!data) notFound();
+  const { course, module: mod, lesson } = data;
+
+  const path = `/courses/${slug}/${moduleSlug}/${lessonSlug}`;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Link
+        href={`/courses/${course.slug}`}
+        className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> {course.title}
+      </Link>
+
+      <PageHeader
+        title={lesson.title}
+        description={`${mod.title} · ${course.title}`}
+        icon={<BookOpen className="h-5 w-5" />}
+        actions={<FavoriteInline path={path} title={lesson.title} />}
+      />
+
+      <article className="glass glow rounded-2xl p-6 text-[15px] leading-relaxed text-foreground/90">
+        {lesson.content.split("\n").map((para, i) => (
+          <p key={i} className="mb-4 last:mb-0">
+            {para}
+          </p>
+        ))}
+      </article>
+
+      <PageNote path={path} title={lesson.title} />
+    </div>
+  );
+}
