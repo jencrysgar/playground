@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
+/* next-themes toggles a `.dark` class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light theme */
+  --background: #f6f5fb;
+  --surface: #ffffff;
+  --surface-2: #faf9ff;
+  --foreground: #1c1530;
+  --muted: #6b6580;
+  --border: rgba(124, 58, 237, 0.14);
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --accent-pink: #ec4899;
+  --accent-blue: #3b82f6;
+  --ring: rgba(124, 58, 237, 0.45);
+  --halo-1: rgba(124, 58, 237, 0.22);
+  --halo-2: rgba(236, 72, 153, 0.18);
+  --halo-3: rgba(59, 130, 246, 0.16);
+}
+
+.dark {
+  --background: #0a0712;
+  --surface: rgba(26, 20, 43, 0.72);
+  --surface-2: rgba(36, 27, 58, 0.6);
+  --foreground: #ece9f5;
+  --muted: #a59fc0;
+  --border: rgba(168, 130, 255, 0.16);
+  --primary: #a855f7;
+  --primary-foreground: #14091f;
+  --accent-pink: #f472b6;
+  --accent-blue: #60a5fa;
+  --ring: rgba(168, 85, 247, 0.55);
+  --halo-1: rgba(124, 58, 237, 0.38);
+  --halo-2: rgba(236, 72, 153, 0.3);
+  --halo-3: rgba(59, 130, 246, 0.28);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent-pink: var(--accent-pink);
+  --color-accent-blue: var(--accent-blue);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-xl: 1.1rem;
+  --radius-2xl: 1.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Ambient aurora / halo backdrop */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20% -10% auto -10%;
+  height: 80vh;
+  z-index: -1;
+  background:
+    radial-gradient(40% 50% at 20% 15%, var(--halo-1), transparent 70%),
+    radial-gradient(35% 45% at 85% 10%, var(--halo-2), transparent 70%),
+    radial-gradient(45% 55% at 60% 30%, var(--halo-3), transparent 75%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+@layer utilities {
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--border);
+  }
+  .glass-2 {
+    background: var(--surface-2);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    border: 1px solid var(--border);
+  }
+  .glow {
+    box-shadow:
+      0 0 0 1px var(--border),
+      0 10px 40px -12px var(--halo-1),
+      0 4px 16px -8px rgba(0, 0, 0, 0.25);
+  }
+  .glow-hover {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.3s ease;
+  }
+  .glow-hover:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 0 0 1px var(--ring),
+      0 18px 50px -14px var(--halo-1),
+      0 8px 24px -10px var(--halo-2);
+  }
+  .text-gradient {
+    background: linear-gradient(
+      100deg,
+      var(--primary),
+      var(--accent-pink) 55%,
+      var(--accent-blue)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ring-focus:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+  .halo-btn {
+    box-shadow:
+      0 8px 24px -8px var(--halo-1),
+      0 2px 8px -2px var(--halo-2);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ring);
 }
