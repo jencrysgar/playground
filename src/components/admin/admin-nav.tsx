@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, Users, Tags, StickyNote } from "lucide-react";
+import { Shield, Users, Tags, StickyNote, UploadCloud } from "lucide-react";
 import { cn } from "@/components/ui";
 
 export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const tabs = [
     { href: "/admin", label: "Overview", icon: Shield, show: true },
+    { href: "/admin/import", label: "Import", icon: UploadCloud, show: true },
     { href: "/admin/users", label: "Users", icon: Users, show: isAdmin },
     { href: "/admin/tags", label: "Tags", icon: Tags, show: true },
     { href: "/admin/notes", label: "All Notes", icon: StickyNote, show: isAdmin },
