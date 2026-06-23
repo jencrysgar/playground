@@ -36,6 +36,7 @@ model User {
   links          Link[]
   promptUsages   PromptUsage[]
   promptCopies   UserPromptCopy[]
+  aiCalls        AiCall[]
 }
 
 model Session {
@@ -150,6 +151,17 @@ model Agent {
   url         String @default("") // external link to a Custom GPT / Claude Project / etc.
   platform    String @default("") // e.g. ChatGPT, Claude
   accessRole  String @default("USER")
+}
+
+// Logs each AI call for per-user rate limiting / usage guardrails.
+model AiCall {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // "search" | "import"
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
 }
 
 // A user's personalized copy of a prompt or a skill's core prompt.
