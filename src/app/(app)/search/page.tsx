@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Search as SearchIcon, GraduationCap, Wand2, Lightbulb, Bot } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { search } from "@/lib/content";
 import { prisma } from "@/lib/db";
+import { ensureSection } from "@/lib/access";
 import { PageHeader, TagPill, EmptyState, cn } from "@/components/ui";
 import { AskAi } from "@/components/app/ask-ai";
 
@@ -19,9 +20,10 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string; tag?: string }>;
 }) {
   const { q = "", tag = "" } = await searchParams;
-  const role = userRole((await getCurrentUser())!);
+  const user = (await getCurrentUser())!;
+  await ensureSection(user, "search");
   const tags = await prisma.tag.findMany({ orderBy: { name: "asc" } });
-  const results = q || tag ? await search(role, q, tag || undefined) : [];
+  const results = q || tag ? await search(user, q, tag || undefined) : [];
 
   return (
     <div>

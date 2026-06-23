@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Lightbulb } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getPrompt, promptUsageFor } from "@/lib/content";
 import { getUserPromptCopy } from "@/lib/personal";
 import { canEditContent } from "@/lib/permissions";
@@ -17,8 +17,7 @@ export default async function PromptDetailPage({
 }) {
   const { slug } = await params;
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
-  const prompt = await getPrompt(slug, role);
+  const prompt = await getPrompt(slug, user);
   if (!prompt) notFound();
   const path = `/prompts/${prompt.slug}`;
   const canEdit = canEditContent(user.role);

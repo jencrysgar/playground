@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { Bot, Plus, ExternalLink } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getAgents, tagsFor } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
+import { ensureSection } from "@/lib/access";
 import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 
 export default async function AgentsPage() {
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
+  await ensureSection(user, "agents");
   const canEdit = canEditContent(user.role);
-  const agents = await getAgents(role);
+  const agents = await getAgents(user);
   const tagMap = await tagsFor("agent", agents.map((a) => a.id));
 
   return (

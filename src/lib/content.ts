@@ -1,8 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { canAccess, type Role } from "@/lib/permissions";
+import { getVisibility, type AccessUser, type Visibility } from "@/lib/access";
 
 export type TagLite = { id: string; name: string; color: string };
+
+function roleOf(user: AccessUser): Role {
+  return (user.role as Role) ?? "USER";
+}
 
 /** Roles a given role can access (for DB `in` filters). */
 function accessibleRoles(role: Role): string[] {
@@ -31,15 +36,41 @@ export async function tagsFor(
   return map;
 }
 
-export async function getCourses(role: Role) {
+type CourseWithModules = Awaited<ReturnType<typeof fetchCourses>>[number];
+
+function fetchCourses(roles: string[]) {
   return prisma.course.findMany({
-    where: { accessRole: { in: accessibleRoles(role) } },
+    where: { accessRole: { in: roles } },
     orderBy: { title: "asc" },
-    include: { modules: { include: { lessons: true } } },
+    include: {
+      modules: {
+        orderBy: { order: "asc" },
+        include: { lessons: { orderBy: { order: "asc" } } },
+      },
+    },
   });
 }
 
-export async function getCourse(slug: string, role: Role) {
+/** Trim a course's modules/lessons to only those visible in custom mode. */
+function applyCourseVisibility(course: CourseWithModules, vis: Visibility) {
+  if (vis.mode === "all") return course;
+  const modules = course.modules
+    .map((m) => ({ ...m, lessons: m.lessons.filter((l) => vis.lessons.has(l.id)) }))
+    .filter((m) => m.lessons.length > 0);
+  return { ...course, modules };
+}
+
+export async function getCourses(user: AccessUser) {
+  const vis = await getVisibility(user);
+  const courses = await fetchCourses(accessibleRoles(roleOf(user)));
+  if (vis.mode === "all") return courses;
+  return courses
+    .map((c) => applyCourseVisibility(c, vis))
+    .filter((c) => c.modules.length > 0);
+}
+
+export async function getCourse(slug: string, user: AccessUser) {
+  const vis = await getVisibility(user);
   const course = await prisma.course.findUnique({
     where: { slug },
     include: {
@@ -49,17 +80,19 @@ export async function getCourse(slug: string, role: Role) {
       },
     },
   });
-  if (!course || !canAccess(role, course.accessRole)) return null;
-  return course;
+  if (!course || !canAccess(roleOf(user), course.accessRole)) return null;
+  if (vis.mode === "all") return course;
+  const trimmed = applyCourseVisibility(course, vis);
+  return trimmed.modules.length > 0 ? trimmed : null;
 }
 
 export async function getLesson(
   courseSlug: string,
   moduleSlug: string,
   lessonSlug: string,
-  role: Role,
+  user: AccessUser,
 ) {
-  const course = await getCourse(courseSlug, role);
+  const course = await getCourse(courseSlug, user);
   if (!course) return null;
   const mod = course.modules.find((m) => m.slug === moduleSlug);
   const lesson = mod?.lessons.find((l) => l.slug === lessonSlug);
@@ -67,23 +100,36 @@ export async function getLesson(
   return { course, module: mod, lesson };
 }
 
-export async function getSkills(role: Role) {
-  return prisma.skill.findMany({
-    where: { accessRole: { in: accessibleRoles(role) } },
+export async function getSkills(user: AccessUser) {
+  const vis = await getVisibility(user);
+  const skills = await prisma.skill.findMany({
+    where: { accessRole: { in: accessibleRoles(roleOf(user)) } },
     orderBy: { title: "asc" },
   });
+  return vis.mode === "all" ? skills : skills.filter((s) => vis.skills.has(s.id));
 }
-export async function getSkill(slug: string, role: Role) {
+export async function getSkill(slug: string, user: AccessUser) {
+  const vis = await getVisibility(user);
   const s = await prisma.skill.findUnique({ where: { slug } });
-  if (!s || !canAccess(role, s.accessRole)) return null;
+  if (!s || !canAccess(roleOf(user), s.accessRole)) return null;
+  if (vis.mode === "custom" && !vis.skills.has(s.id)) return null;
   return s;
 }
 
-export async function getPrompts(role: Role) {
-  return prisma.prompt.findMany({
-    where: { accessRole: { in: accessibleRoles(role) } },
+export async function getPrompts(user: AccessUser) {
+  const vis = await getVisibility(user);
+  const prompts = await prisma.prompt.findMany({
+    where: { accessRole: { in: accessibleRoles(roleOf(user)) } },
     orderBy: { title: "asc" },
   });
+  return vis.mode === "all" ? prompts : prompts.filter((p) => vis.prompts.has(p.id));
+}
+export async function getPrompt(slug: string, user: AccessUser) {
+  const vis = await getVisibility(user);
+  const p = await prisma.prompt.findUnique({ where: { slug } });
+  if (!p || !canAccess(roleOf(user), p.accessRole)) return null;
+  if (vis.mode === "custom" && !vis.prompts.has(p.id)) return null;
+  return p;
 }
 
 /** Map of promptId -> usage count for a specific user. */
@@ -99,21 +145,20 @@ export async function promptUsageFor(
   for (const u of usages) map[u.promptId] = u.count;
   return map;
 }
-export async function getPrompt(slug: string, role: Role) {
-  const p = await prisma.prompt.findUnique({ where: { slug } });
-  if (!p || !canAccess(role, p.accessRole)) return null;
-  return p;
-}
 
-export async function getAgents(role: Role) {
-  return prisma.agent.findMany({
-    where: { accessRole: { in: accessibleRoles(role) } },
+export async function getAgents(user: AccessUser) {
+  const vis = await getVisibility(user);
+  const agents = await prisma.agent.findMany({
+    where: { accessRole: { in: accessibleRoles(roleOf(user)) } },
     orderBy: { title: "asc" },
   });
+  return vis.mode === "all" ? agents : agents.filter((a) => vis.agents.has(a.id));
 }
-export async function getAgent(slug: string, role: Role) {
+export async function getAgent(slug: string, user: AccessUser) {
+  const vis = await getVisibility(user);
   const a = await prisma.agent.findUnique({ where: { slug } });
-  if (!a || !canAccess(role, a.accessRole)) return null;
+  if (!a || !canAccess(roleOf(user), a.accessRole)) return null;
+  if (vis.mode === "custom" && !vis.agents.has(a.id)) return null;
   return a;
 }
 
@@ -127,26 +172,24 @@ export type SearchResult = {
 };
 
 export async function search(
-  role: Role,
+  user: AccessUser,
   query: string,
   tagId?: string,
 ): Promise<SearchResult[]> {
-  const roles = accessibleRoles(role);
   const q = query.trim().toLowerCase();
 
   let allowedByTag: Set<string> | null = null;
   if (tagId) {
-    const assignments = await prisma.tagAssignment.findMany({
-      where: { tagId },
-    });
+    const assignments = await prisma.tagAssignment.findMany({ where: { tagId } });
     allowedByTag = new Set(assignments.map((a) => `${a.entityType}:${a.entityId}`));
   }
 
+  // Reuse the access-aware getters so search only covers what the user can see.
   const [courses, skills, prompts, agents] = await Promise.all([
-    prisma.course.findMany({ where: { accessRole: { in: roles } } }),
-    prisma.skill.findMany({ where: { accessRole: { in: roles } } }),
-    prisma.prompt.findMany({ where: { accessRole: { in: roles } } }),
-    prisma.agent.findMany({ where: { accessRole: { in: roles } } }),
+    getCourses(user),
+    getSkills(user),
+    getPrompts(user),
+    getAgents(user),
   ]);
 
   const tagMaps = {
@@ -168,10 +211,7 @@ export async function search(
     }
   }
   for (const s of skills) {
-    if (
-      matchText(s.title, s.description, s.problem, s.whatYouGet, s.corePrompt) &&
-      matchTag("skill", s.id)
-    ) {
+    if (matchText(s.title, s.description, s.problem, s.whatYouGet, s.corePrompt) && matchTag("skill", s.id)) {
       results.push({ type: "skill", id: s.id, title: s.title, description: s.description, href: `/skills/${s.slug}`, tags: tagMaps.skill[s.id] ?? [] });
     }
   }
@@ -181,10 +221,7 @@ export async function search(
     }
   }
   for (const a of agents) {
-    if (
-      matchText(a.title, a.description, a.platform) &&
-      matchTag("agent", a.id)
-    ) {
+    if (matchText(a.title, a.description, a.platform) && matchTag("agent", a.id)) {
       results.push({ type: "agent", id: a.id, title: a.title, description: a.description, href: `/agents/${a.slug}`, tags: tagMaps.agent[a.id] ?? [] });
     }
   }

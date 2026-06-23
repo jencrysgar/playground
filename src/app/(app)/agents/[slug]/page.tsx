@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Bot, ExternalLink } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getAgent } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
 import { PageHeader, Section, Prose } from "@/components/ui";
@@ -14,8 +14,7 @@ export default async function AgentDetailPage({
 }) {
   const { slug } = await params;
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
-  const agent = await getAgent(slug, role);
+  const agent = await getAgent(slug, user);
   if (!agent) notFound();
   const path = `/agents/${agent.slug}`;
   const canEdit = canEditContent(user.role);

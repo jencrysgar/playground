@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Wand2, Zap } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getSkill } from "@/lib/content";
 import { getUserPromptCopy } from "@/lib/personal";
 import { canEditContent } from "@/lib/permissions";
@@ -18,8 +18,7 @@ export default async function SkillDetailPage({
 }) {
   const { slug } = await params;
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
-  const skill = await getSkill(slug, role);
+  const skill = await getSkill(slug, user);
   if (!skill) notFound();
   const path = `/skills/${skill.slug}`;
   const canEdit = canEditContent(user.role);

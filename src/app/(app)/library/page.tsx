@@ -1,11 +1,13 @@
 import { Library } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureSection } from "@/lib/access";
 import { PageHeader } from "@/components/ui";
 import { LibraryManager } from "@/components/app/library-manager";
 
 export default async function LibraryPage() {
   const user = (await getCurrentUser())!;
+  await ensureSection(user, "library");
   const links = await prisma.link.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },

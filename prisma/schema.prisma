@@ -27,6 +27,8 @@ model User {
   totpEnabled       Boolean  @default(false)
   smsPhone          String?
   smsEnabled        Boolean  @default(false)
+  // "all" = sees everything their role allows; "custom" = only granted sections/items.
+  accessMode        String   @default("all")
   createdAt         DateTime @default(now())
 
   sessions       Session[]
@@ -37,6 +39,31 @@ model User {
   promptUsages   PromptUsage[]
   promptCopies   UserPromptCopy[]
   aiCalls        AiCall[]
+  sectionAccess  UserSection[]
+  grants         AccessGrant[]
+}
+
+// Which sections a "custom"-access user may see (e.g. courses, skills, library).
+model UserSection {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section String // courses | skills | prompts | agents | library | favorites | notes | search
+
+  @@unique([userId, section])
+}
+
+// Per-user grant of a specific content resource (course/module/lesson/skill/prompt/agent).
+// A course/module grant implies its descendants. Only consulted in "custom" access mode.
+model AccessGrant {
+  id           String @id @default(cuid())
+  userId       String
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceType String // course | module | lesson | skill | prompt | agent
+  resourceId   String
+
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, resourceType])
 }
 
 model Session {
@@ -115,7 +142,8 @@ model Skill {
   worksWith    String @default("") // comma list: ChatGPT, Claude, Gemini…
   corePrompt   String @default("") // the copy/paste core prompt
   promptNotes  String @default("") // notes about customizing the prompt
-  accessRole   String @default("USER")
+  accessRole   String   @default("USER")
+  createdAt    DateTime @default(now())
 }
 
 model Prompt {
@@ -128,6 +156,7 @@ model Prompt {
   extraTitle   String        @default("") // optional admin section, e.g. "What you'll get back"
   extraContent String        @default("")
   accessRole   String        @default("USER")
+  createdAt    DateTime      @default(now())
   usages       PromptUsage[]
 }
 
@@ -150,7 +179,8 @@ model Agent {
   description String
   url         String @default("") // external link to a Custom GPT / Claude Project / etc.
   platform    String @default("") // e.g. ChatGPT, Claude
-  accessRole  String @default("USER")
+  accessRole  String   @default("USER")
+  createdAt   DateTime @default(now())
 }
 
 // Logs each AI call for per-user rate limiting / usage guardrails.

@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { Wand2, Plus } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getSkills, tagsFor } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
+import { ensureSection } from "@/lib/access";
 import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 
 export default async function SkillsPage() {
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
+  await ensureSection(user, "skills");
   const canEdit = canEditContent(user.role);
-  const skills = await getSkills(role);
+  const skills = await getSkills(user);
   const tagMap = await tagsFor("skill", skills.map((s) => s.id));
 
   return (

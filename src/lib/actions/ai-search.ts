@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getCourses, getSkills, getPrompts, getAgents, tagsFor, type TagLite } from "@/lib/content";
 import { aiSearchPick, type CatalogItem } from "@/lib/ai/tasks";
 import { PROVIDER_LABELS, AIError, type AIProvider } from "@/lib/ai/providers";
@@ -28,13 +28,12 @@ export async function aiSearchAction(query: string): Promise<AiSearchState> {
   if (!user) return { error: "Not authenticated." };
   const q = query.trim();
   if (!q) return { results: [], answeredBy: PROVIDER_LABELS[SEARCH_PROVIDER] };
-  const role = userRole(user);
 
   const [courses, skills, prompts, agents] = await Promise.all([
-    getCourses(role),
-    getSkills(role),
-    getPrompts(role),
-    getAgents(role),
+    getCourses(user),
+    getSkills(user),
+    getPrompts(user),
+    getAgents(user),
   ]);
 
   const [courseTags, skillTags, promptTags, agentTags] = await Promise.all([

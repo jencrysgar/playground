@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { Users } from "lucide-react";
+import { Users, SlidersHorizontal } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { hasRole } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, LinkButton } from "@/components/ui";
 import { UserEditor } from "@/components/admin/user-editor";
 
 export default async function AdminUsersPage() {
@@ -34,7 +34,17 @@ export default async function AdminUsersPage() {
                 <p className="text-sm text-muted">{u.email}</p>
               </div>
             </div>
-            <UserEditor userId={u.id} name={u.name} role={u.role} isSelf={u.id === me.id} />
+            <div className="flex items-center gap-2">
+              {u.accessMode === "custom" && (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                  Custom access
+                </span>
+              )}
+              <UserEditor userId={u.id} name={u.name} role={u.role} isSelf={u.id === me.id} />
+              <LinkButton href={`/admin/users/${u.id}/access`} variant="secondary" size="sm">
+                <SlidersHorizontal className="h-4 w-4" /> Access
+              </LinkButton>
+            </div>
           </div>
         ))}
       </div>
