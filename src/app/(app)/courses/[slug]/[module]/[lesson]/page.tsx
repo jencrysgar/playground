@@ -4,6 +4,7 @@ import { ChevronLeft, BookOpen } from "lucide-react";
 import { getCurrentUser, userRole } from "@/lib/auth";
 import { getLesson } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
+import { sanitizeImportedHtml } from "@/lib/sanitize";
 import { PageHeader, LinkButton } from "@/components/ui";
 import { FavoriteInline, PageNote } from "@/components/app/page-personal";
 
@@ -47,13 +48,20 @@ export default async function LessonPage({
         }
       />
 
-      <article className="glass glow rounded-2xl p-6 text-[15px] leading-relaxed text-foreground/90">
-        {lesson.content.split("\n").map((para, i) => (
-          <p key={i} className="mb-4 last:mb-0">
-            {para}
-          </p>
-        ))}
-      </article>
+      {lesson.contentFormat === "html" ? (
+        <article
+          className="rich-content glass glow rounded-2xl p-6 text-[15px] leading-relaxed text-foreground/90"
+          dangerouslySetInnerHTML={{ __html: sanitizeImportedHtml(lesson.content) }}
+        />
+      ) : (
+        <article className="glass glow rounded-2xl p-6 text-[15px] leading-relaxed text-foreground/90">
+          {lesson.content.split("\n").map((para, i) => (
+            <p key={i} className="mb-4 last:mb-0">
+              {para}
+            </p>
+          ))}
+        </article>
+      )}
 
       <PageNote path={path} title={lesson.title} />
     </div>

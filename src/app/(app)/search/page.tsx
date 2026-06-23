@@ -4,6 +4,7 @@ import { getCurrentUser, userRole } from "@/lib/auth";
 import { search } from "@/lib/content";
 import { prisma } from "@/lib/db";
 import { PageHeader, TagPill, EmptyState, cn } from "@/components/ui";
+import { AskAi } from "@/components/app/ask-ai";
 
 const typeIcon = {
   course: GraduationCap,
@@ -26,9 +27,17 @@ export default async function SearchPage({
     <div>
       <PageHeader
         title="Search"
-        description="Search everything you can access by word or phrase, and filter by tag."
+        description="Ask AI a question, or search by word, phrase, and tags."
         icon={<SearchIcon className="h-5 w-5" />}
       />
+
+      <div className="mb-6">
+        <AskAi />
+      </div>
+
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">
+        Or search by keyword & tag
+      </h2>
 
       <form method="get" className="mb-4">
         <div className="relative">

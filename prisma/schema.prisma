@@ -90,13 +90,14 @@ model Module {
 }
 
 model Lesson {
-  id       String @id @default(cuid())
-  slug     String
-  moduleId String
-  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  title    String
-  content  String
-  order    Int    @default(0)
+  id            String @id @default(cuid())
+  slug          String
+  moduleId      String
+  module        Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title         String
+  content       String
+  contentFormat String @default("text") // "text" | "html"
+  order         Int    @default(0)
 
   @@unique([moduleId, slug])
 }
