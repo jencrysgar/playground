@@ -54,6 +54,75 @@ export async function updateUser(
   return { ok: true };
 }
 
+export async function setAccessMode(userId: string, mode: string) {
+  await requireAdmin();
+  if (mode !== "all" && mode !== "custom") return { error: "Invalid mode" };
+  await prisma.user.update({ where: { id: userId }, data: { accessMode: mode } });
+  revalidatePath(`/admin/users/${userId}/access`);
+  return { ok: true };
+}
+
+export async function setUserSection(
+  userId: string,
+  section: string,
+  enabled: boolean,
+) {
+  await requireAdmin();
+  if (enabled) {
+    await prisma.userSection.upsert({
+      where: { userId_section: { userId, section } },
+      update: {},
+      create: { userId, section },
+    });
+  } else {
+    await prisma.userSection.deleteMany({ where: { userId, section } });
+  }
+  revalidatePath(`/admin/users/${userId}/access`);
+}
+
+export async function setGrant(
+  userId: string,
+  resourceType: string,
+  resourceId: string,
+  granted: boolean,
+) {
+  await requireAdmin();
+  if (granted) {
+    await prisma.accessGrant.upsert({
+      where: { userId_resourceType_resourceId: { userId, resourceType, resourceId } },
+      update: {},
+      create: { userId, resourceType, resourceId },
+    });
+  } else {
+    await prisma.accessGrant.deleteMany({ where: { userId, resourceType, resourceId } });
+  }
+  revalidatePath(`/admin/users/${userId}/access`);
+}
+
+/** Grant/revoke every lesson under a module (bulk) for a user. */
+export async function setModuleLessons(
+  userId: string,
+  moduleId: string,
+  granted: boolean,
+) {
+  await requireAdmin();
+  const lessons = await prisma.lesson.findMany({ where: { moduleId }, select: { id: true } });
+  const ids = lessons.map((l) => l.id);
+  if (granted) {
+    await prisma.accessGrant.deleteMany({
+      where: { userId, resourceType: "lesson", resourceId: { in: ids } },
+    });
+    await prisma.accessGrant.createMany({
+      data: ids.map((id) => ({ userId, resourceType: "lesson", resourceId: id })),
+    });
+  } else {
+    await prisma.accessGrant.deleteMany({
+      where: { userId, resourceType: "lesson", resourceId: { in: ids } },
+    });
+  }
+  revalidatePath(`/admin/users/${userId}/access`);
+}
+
 export async function createTag(name: string, color: string) {
   await requireEditor();
   const clean = name.trim();

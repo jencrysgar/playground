@@ -1,11 +1,13 @@
 import { StickyNote } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureSection } from "@/lib/access";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { NotesList } from "@/components/app/notes-list";
 
 export default async function NotesPage() {
   const user = (await getCurrentUser())!;
+  await ensureSection(user, "notes");
   const notes = await prisma.note.findMany({
     where: { userId: user.id },
     orderBy: { updatedAt: "desc" },

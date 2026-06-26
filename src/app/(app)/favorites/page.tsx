@@ -1,11 +1,13 @@
 import { Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureSection } from "@/lib/access";
 import { PageHeader } from "@/components/ui";
 import { FavoritesView } from "@/components/app/favorites-view";
 
 export default async function FavoritesPage() {
   const user = (await getCurrentUser())!;
+  await ensureSection(user, "favorites");
   const favorites = await prisma.favorite.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },

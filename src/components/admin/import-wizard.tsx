@@ -10,6 +10,10 @@ import {
   type OutlineResult,
 } from "@/lib/actions/import";
 import { PROVIDER_LABELS, type Outline } from "@/lib/ai/shared";
+import { inlineImages } from "@/lib/import-inline";
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB per image
+const MAX_TOTAL_BYTES = 20 * 1024 * 1024; // 20 MB total inlined
 
 function deriveTitle(content: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
@@ -23,25 +27,119 @@ function deriveTitle(content: string, fallback: string): string {
   }
 }
 
+function readAsText(file: File): Promise<string> {
+  return file.text();
+}
+
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function isTextFile(f: File): boolean {
+  return /\.(html?|md|markdown|txt)$/i.test(f.name) || /^text\//.test(f.type);
+}
+function isImageFile(f: File): boolean {
+  return /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(f.name);
+}
+
+/** Recursively collect files from a drop, including dropped folders. */
+async function gatherFiles(dt: DataTransfer): Promise<File[]> {
+  const items = dt.items ? Array.from(dt.items) : [];
+  const getEntry = (it: DataTransferItem) =>
+    (it as unknown as { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.() ?? null;
+
+  if (items.length && items.some((it) => getEntry(it))) {
+    const files: File[] = [];
+    const walk = async (entry: FileSystemEntry): Promise<void> => {
+      if (entry.isFile) {
+        const file = await new Promise<File>((res, rej) =>
+          (entry as FileSystemFileEntry).file(res, rej),
+        );
+        files.push(file);
+      } else if (entry.isDirectory) {
+        const reader = (entry as FileSystemDirectoryEntry).createReader();
+        const readBatch = () =>
+          new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej));
+        let batch = await readBatch();
+        while (batch.length) {
+          for (const e of batch) await walk(e);
+          batch = await readBatch();
+        }
+      }
+    };
+    for (const it of items) {
+      const entry = getEntry(it);
+      if (entry) await walk(entry);
+    }
+    if (files.length) return files;
+  }
+  return Array.from(dt.files);
+}
+
 export function ImportWizard() {
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [title, setTitle] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [outlines, setOutlines] = useState<{ openai: OutlineResult; anthropic: OutlineResult } | null>(null);
   const [thinking, setThinking] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function loadText(text: string, name: string) {
+  function loadText(text: string, name: string, note?: string | null) {
     setContent(text);
     setFileName(name);
     setTitle(deriveTitle(text, name.replace(/\.[^.]+$/, "") || "Imported course"));
+    setNotice(note ?? null);
     setOutlines(null);
   }
 
-  async function handleFile(file: File) {
-    const text = await file.text();
-    loadText(text, file.name);
+  async function processFiles(files: File[]) {
+    if (files.length === 0) return;
+    const textFile = files.find(isTextFile) ?? files.find((f) => !isImageFile(f));
+    if (!textFile) {
+      setNotice("Add an .html, .md, or .txt file — images can be dropped alongside it.");
+      return;
+    }
+    const text = await readAsText(textFile);
+
+    // Build a basename -> data URI map from any dropped image files.
+    const imageFiles = files.filter(isImageFile);
+    const map: Record<string, string> = {};
+    let total = 0;
+    let skipped = 0;
+    for (const img of imageFiles) {
+      if (img.size > MAX_IMAGE_BYTES || total + img.size > MAX_TOTAL_BYTES) {
+        skipped++;
+        continue;
+      }
+      try {
+        map[img.name.toLowerCase()] = await readAsDataUrl(img);
+        total += img.size;
+      } catch {
+        skipped++;
+      }
+    }
+
+    const isHtml = /\.html?$/i.test(textFile.name) || /<\w+[\s>]/.test(text);
+    let finalText = text;
+    const notes: string[] = [];
+    if (isHtml && imageFiles.length) {
+      const result = inlineImages(text, map);
+      finalText = result.html;
+      if (result.replaced) notes.push(`Embedded ${result.replaced} image${result.replaced === 1 ? "" : "s"}.`);
+      if (result.unresolved.length) notes.push(`${result.unresolved.length} image reference(s) had no matching file.`);
+    } else if (imageFiles.length && !isHtml) {
+      notes.push("Images are only inlined for HTML files.");
+    }
+    if (skipped) notes.push(`${skipped} image(s) skipped (over size limit).`);
+
+    loadText(finalText, textFile.name, notes.join(" ") || null);
   }
 
   async function generate() {
@@ -61,11 +159,11 @@ export function ImportWizard() {
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault();
           setDragOver(false);
-          const file = e.dataTransfer.files?.[0];
-          if (file) handleFile(file);
+          const files = await gatherFiles(e.dataTransfer);
+          if (files.length) processFiles(files);
         }}
         className={cn(
           "flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition",
@@ -75,19 +173,23 @@ export function ImportWizard() {
         <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
           <UploadCloud className="h-6 w-6" />
         </div>
-        <p className="font-medium">Drag & drop a saved webpage or document</p>
-        <p className="text-sm text-muted">.html, .htm, .md, or .txt — or paste the content below</p>
+        <p className="font-medium">Drag & drop a saved webpage, folder, or document</p>
+        <p className="text-sm text-muted">
+          Drop the .html plus its image files (or the whole saved-page folder) to keep images.
+          You can also paste content below.
+        </p>
         <label className="cursor-pointer">
           <span className="inline-flex h-9 items-center rounded-xl glass px-4 text-sm font-medium ring-focus transition hover:border-[var(--ring)]">
-            Choose a file
+            Choose files
           </span>
           <input
             type="file"
-            accept=".html,.htm,.md,.markdown,.txt,text/html,text/plain"
+            multiple
+            accept=".html,.htm,.md,.markdown,.txt,.png,.jpg,.jpeg,.gif,.webp,.svg,.avif,text/html,text/plain,image/*"
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
+              const files = e.target.files ? Array.from(e.target.files) : [];
+              if (files.length) processFiles(files);
             }}
           />
         </label>
@@ -110,6 +212,9 @@ export function ImportWizard() {
             <FileText className="h-4 w-4" />
             {fileName || "Pasted content"} · {content.length.toLocaleString()} characters
           </div>
+          {notice && (
+            <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">{notice}</p>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Course title</label>

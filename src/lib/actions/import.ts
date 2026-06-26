@@ -8,6 +8,7 @@ import { canEditContent } from "@/lib/permissions";
 import { sanitizeImportedHtml } from "@/lib/sanitize";
 import { aiOutline, type Outline } from "@/lib/ai/tasks";
 import { AIError } from "@/lib/ai/providers";
+import { enforceAiLimit, RateLimitError } from "@/lib/ai/limits";
 
 async function requireEditor() {
   const user = await getCurrentUser();
@@ -35,7 +36,13 @@ export type OutlineResult = { ok: true; outline: Outline } | { ok: false; error:
 export async function proposeOutlines(
   material: string,
 ): Promise<{ openai: OutlineResult; anthropic: OutlineResult }> {
-  await requireEditor();
+  const user = await requireEditor();
+  try {
+    await enforceAiLimit(user.id, "import");
+  } catch (e) {
+    const msg = e instanceof RateLimitError ? e.message : "Rate limit error.";
+    return { openai: { ok: false, error: msg }, anthropic: { ok: false, error: msg } };
+  }
   const text = material.slice(0, 20000);
 
   const run = async (provider: "openai" | "anthropic"): Promise<OutlineResult> => {

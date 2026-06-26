@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GraduationCap, BookOpen, Clock, ListChecks } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getCourse } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
 import { PageHeader, Card, Section, Prose, BulletList } from "@/components/ui";
@@ -15,8 +15,7 @@ export default async function CourseDetailPage({
 }) {
   const { slug } = await params;
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
-  const course = await getCourse(slug, role);
+  const course = await getCourse(slug, user);
   if (!course) notFound();
   const path = `/courses/${course.slug}`;
   const canEdit = canEditContent(user.role);

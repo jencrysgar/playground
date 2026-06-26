@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, BookOpen } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getLesson } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
 import { sanitizeImportedHtml } from "@/lib/sanitize";
@@ -15,9 +15,8 @@ export default async function LessonPage({
 }) {
   const { slug, module: moduleSlug, lesson: lessonSlug } = await params;
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
   const canEdit = canEditContent(user.role);
-  const data = await getLesson(slug, moduleSlug, lessonSlug, role);
+  const data = await getLesson(slug, moduleSlug, lessonSlug, user);
   if (!data) notFound();
   const { course, module: mod, lesson } = data;
 

@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { Lightbulb, Plus } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getPrompts, tagsFor, promptUsageFor } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
+import { ensureSection } from "@/lib/access";
 import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 import { PromptCopyButton } from "@/components/app/prompt-actions";
 
 export default async function PromptsPage() {
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
+  await ensureSection(user, "prompts");
   const canEdit = canEditContent(user.role);
-  const prompts = await getPrompts(role);
+  const prompts = await getPrompts(user);
   const tagMap = await tagsFor("prompt", prompts.map((p) => p.id));
   const usage = await promptUsageFor(user.id, prompts.map((p) => p.id));
 

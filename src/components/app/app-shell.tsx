@@ -26,30 +26,32 @@ import { FavoriteButton } from "@/components/app/favorite-button";
 import { logoutAction } from "@/lib/actions/auth";
 import { hasRole } from "@/lib/permissions";
 
-type NavItem = { href: string; label: string; icon: React.ElementType };
+type NavItem = { href: string; label: string; icon: React.ElementType; section?: string };
 
 const mainNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/courses", label: "Courses", icon: GraduationCap },
-  { href: "/skills", label: "Skills", icon: Wand2 },
-  { href: "/prompts", label: "Prompts", icon: Lightbulb },
-  { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/library", label: "URL Library", icon: Library },
+  { href: "/search", label: "Search", icon: Search, section: "search" },
+  { href: "/courses", label: "Courses", icon: GraduationCap, section: "courses" },
+  { href: "/skills", label: "Skills", icon: Wand2, section: "skills" },
+  { href: "/prompts", label: "Prompts", icon: Lightbulb, section: "prompts" },
+  { href: "/agents", label: "Agents", icon: Bot, section: "agents" },
+  { href: "/library", label: "URL Library", icon: Library, section: "library" },
 ];
 
 const personalNav: NavItem[] = [
-  { href: "/favorites", label: "Favorites", icon: Star },
-  { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/search", label: "Search", icon: Search },
+  { href: "/favorites", label: "Favorites", icon: Star, section: "favorites" },
+  { href: "/notes", label: "Notes", icon: StickyNote, section: "notes" },
 ];
 
 export function AppShell({
   user,
   favoritePaths,
+  sections,
   children,
 }: {
   user: { name: string; email: string; role: string };
   favoritePaths: string[];
+  sections: string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -60,6 +62,11 @@ export function AppShell({
   const isAdmin = hasRole(user.role, "EDITOR");
   const favSet = new Set(favoritePaths);
   const isFavorited = favSet.has(pathname);
+  const secSet = new Set(sections);
+  const visible = (items: NavItem[]) => items.filter((i) => !i.section || secSet.has(i.section));
+  const visibleMain = visible(mainNav);
+  const visiblePersonal = visible(personalNav);
+  const canSearch = secSet.has("search");
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -86,19 +93,23 @@ export function AppShell({
         </div>
 
         <nav className="mt-6 flex flex-col gap-1">
-          {mainNav.map((item) => (
+          {visibleMain.map((item) => (
             <NavLink key={item.href} item={item} active={pathname === item.href} onClick={() => setOpen(false)} />
           ))}
         </nav>
 
-        <p className="mt-6 px-3 text-xs font-medium uppercase tracking-wider text-muted">
-          Personal
-        </p>
-        <nav className="mt-2 flex flex-col gap-1">
-          {personalNav.map((item) => (
-            <NavLink key={item.href} item={item} active={pathname === item.href} onClick={() => setOpen(false)} />
-          ))}
-        </nav>
+        {visiblePersonal.length > 0 && (
+          <>
+            <p className="mt-6 px-3 text-xs font-medium uppercase tracking-wider text-muted">
+              Personal
+            </p>
+            <nav className="mt-2 flex flex-col gap-1">
+              {visiblePersonal.map((item) => (
+                <NavLink key={item.href} item={item} active={pathname === item.href} onClick={() => setOpen(false)} />
+              ))}
+            </nav>
+          </>
+        )}
 
         {isAdmin && (
           <>
@@ -129,15 +140,19 @@ export function AppShell({
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </button>
-          <form onSubmit={submitSearch} className="relative flex-1 max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search everything…"
-              className="w-full rounded-xl glass-2 py-2 pl-9 pr-3 text-sm ring-focus"
-            />
-          </form>
+          {canSearch ? (
+            <form onSubmit={submitSearch} className="relative flex-1 max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search everything…"
+                className="w-full rounded-xl glass-2 py-2 pl-9 pr-3 text-sm ring-focus"
+              />
+            </form>
+          ) : (
+            <div className="flex-1" />
+          )}
           <div className="ml-auto flex items-center gap-2">
             <FavoriteButton path={pathname} title={titleFromPath(pathname)} initialFavorited={isFavorited} />
             <ThemeToggle />

@@ -1,9 +1,10 @@
 "use server";
 
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getCourses, getSkills, getPrompts, getAgents, tagsFor, type TagLite } from "@/lib/content";
 import { aiSearchPick, type CatalogItem } from "@/lib/ai/tasks";
 import { PROVIDER_LABELS, AIError, type AIProvider } from "@/lib/ai/providers";
+import { enforceAiLimit, RateLimitError } from "@/lib/ai/limits";
 
 const SEARCH_PROVIDER: AIProvider =
   process.env.AI_SEARCH_PROVIDER === "anthropic" ? "anthropic" : "openai";
@@ -27,13 +28,12 @@ export async function aiSearchAction(query: string): Promise<AiSearchState> {
   if (!user) return { error: "Not authenticated." };
   const q = query.trim();
   if (!q) return { results: [], answeredBy: PROVIDER_LABELS[SEARCH_PROVIDER] };
-  const role = userRole(user);
 
   const [courses, skills, prompts, agents] = await Promise.all([
-    getCourses(role),
-    getSkills(role),
-    getPrompts(role),
-    getAgents(role),
+    getCourses(user),
+    getSkills(user),
+    getPrompts(user),
+    getAgents(user),
   ]);
 
   const [courseTags, skillTags, promptTags, agentTags] = await Promise.all([
@@ -66,6 +66,7 @@ export async function aiSearchAction(query: string): Promise<AiSearchState> {
   for (const a of agents) add("agent", a.id, a.title, a.description, a.platform, `/agents/${a.slug}`, agentTags[a.id] ?? []);
 
   try {
+    await enforceAiLimit(user.id, "search");
     const picks = await aiSearchPick(SEARCH_PROVIDER, q, catalog);
     const results: AiSearchResult[] = [];
     for (const pick of picks) {
@@ -74,6 +75,7 @@ export async function aiSearchAction(query: string): Promise<AiSearchState> {
     }
     return { results, answeredBy: PROVIDER_LABELS[SEARCH_PROVIDER] };
   } catch (e) {
+    if (e instanceof RateLimitError) return { error: e.message };
     if (e instanceof AIError) return { error: e.message };
     return { error: e instanceof Error ? e.message : "AI search failed." };
   }

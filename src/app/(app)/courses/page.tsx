@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { GraduationCap, Layers, Plus } from "lucide-react";
-import { getCurrentUser, userRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { getCourses, tagsFor } from "@/lib/content";
 import { canEditContent } from "@/lib/permissions";
+import { ensureSection } from "@/lib/access";
 import { Card, PageHeader, TagPill, EmptyState, LinkButton } from "@/components/ui";
 
 export default async function CoursesPage() {
   const user = (await getCurrentUser())!;
-  const role = userRole(user);
+  await ensureSection(user, "courses");
   const canEdit = canEditContent(user.role);
-  const courses = await getCourses(role);
+  const courses = await getCourses(user);
   const tagMap = await tagsFor("course", courses.map((c) => c.id));
 
   return (
