@@ -15,6 +15,16 @@ This is the **AI Knowledge Center**: a Next.js 16 (App Router) + TypeScript + Ta
 **Non-obvious gotchas:**
 - **Database is PostgreSQL** via `DATABASE_URL` (env var; not committed). There is no local DB file — you MUST set `DATABASE_URL` (a hosted Postgres like Neon/Supabase) for the app to run. After editing the schema, run `npm run db:push`. The seed (`prisma/seed.ts`) is **idempotent and non-destructive** (`update: {}`), so re-running never overwrites edits — safe to run on every startup.
 - If `DATABASE_URL` is missing, `prisma generate`/`npm run build` still work, but the running app and `db push`/`seed` will fail until it's set.
+- **Dev without a hosted DB**: if no `DATABASE_URL` secret is provided, stand up a throwaway local Postgres so the app runs (data will NOT persist across VM restarts — a hosted `DATABASE_URL` is required for persistence):
+  ```bash
+  sudo apt-get install -y postgresql
+  sudo pg_ctlcluster 16 main start
+  sudo -u postgres psql -c "CREATE ROLE akc LOGIN PASSWORD 'akc' CREATEDB;"
+  sudo -u postgres psql -c "CREATE DATABASE akc OWNER akc;"
+  export DATABASE_URL="postgresql://akc:akc@localhost:5432/akc"
+  npm run db:push && npm run db:seed
+  # start the dev server in the same shell/tmux so it inherits DATABASE_URL
+  ```
 - **Prisma is pinned to v6 on purpose.** Prisma 7 removed `url` from the schema and requires driver adapters + `prisma.config.ts`; do not bump to 7 without migrating that config.
 - **Demo accounts** (password `Password123!`): `admin@akc.dev` (ADMIN), `editor@akc.dev` (EDITOR), `member@akc.dev` (USER). The very first user to sign up becomes ADMIN.
 - **Roles/permissions** are defined in one place — `src/lib/permissions.ts` (`canEditContent` = EDITOR+, `canManageUsers` = ADMIN; `ROLE_CAPABILITIES` is the human-readable matrix shown on `/admin`). Content mutations live in `src/lib/actions/content-admin.ts` (guarded to EDITOR+); user management in `src/lib/actions/admin.ts` (ADMIN). Enforce permissions in the server action, not just the UI.
