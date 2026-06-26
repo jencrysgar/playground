@@ -6,14 +6,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Cursor Cloud specific instructions
 
-This is the **AI Knowledge Center**: a Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 app, with Prisma + SQLite for data. Source lives in `src/`. Standard scripts are in `package.json` (`dev`, `build`, `start`, `lint`, `db:push`, `db:seed`).
+This is the **AI Knowledge Center**: a Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 app, with Prisma + **PostgreSQL** for data. Source lives in `src/`. Standard scripts are in `package.json` (`dev`, `build`, `start`, `lint`, `db:push`, `db:seed`).
 
 **Services / how to run** (just one service — the Next.js app, frontend + backend together):
 - Dev server: `npm run dev` on `http://localhost:3000`. Run it in a tmux session so it survives between commands; it does not exit on its own (don't wait on it as a foreground task).
-- The update script runs `npm install` (which runs `prisma generate` via `postinstall`), then `prisma db push` and `prisma db seed`. So on a fresh session the SQLite DB at `prisma/dev.db` already exists and is seeded — you normally don't need to run those manually.
+- The update script runs `npm install` (`prisma generate` via `postinstall`), then — **only if `DATABASE_URL` is set** — `prisma db push` and `prisma db seed`.
 
 **Non-obvious gotchas:**
-- **Database is SQLite** at `prisma/dev.db` (gitignored). The datasource URL is hardcoded in `prisma/schema.prisma` (no `.env` needed). After editing the schema, run `npm run db:push` (and re-seed if needed). The seed (`prisma/seed.ts`) is idempotent (upserts), so `npm run db:seed` is safe to re-run.
+- **Database is PostgreSQL** via `DATABASE_URL` (env var; not committed). There is no local DB file — you MUST set `DATABASE_URL` (a hosted Postgres like Neon/Supabase) for the app to run. After editing the schema, run `npm run db:push`. The seed (`prisma/seed.ts`) is **idempotent and non-destructive** (`update: {}`), so re-running never overwrites edits — safe to run on every startup.
+- If `DATABASE_URL` is missing, `prisma generate`/`npm run build` still work, but the running app and `db push`/`seed` will fail until it's set.
+- **Dev without a hosted DB**: if no `DATABASE_URL` secret is provided, stand up a throwaway local Postgres so the app runs (data will NOT persist across VM restarts — a hosted `DATABASE_URL` is required for persistence):
+  ```bash
+  sudo apt-get install -y postgresql
+  sudo pg_ctlcluster 16 main start
+  sudo -u postgres psql -c "CREATE ROLE akc LOGIN PASSWORD 'akc' CREATEDB;"
+  sudo -u postgres psql -c "CREATE DATABASE akc OWNER akc;"
+  export DATABASE_URL="postgresql://akc:akc@localhost:5432/akc"
+  npm run db:push && npm run db:seed
+  # start the dev server in the same shell/tmux so it inherits DATABASE_URL
+  ```
 - **Prisma is pinned to v6 on purpose.** Prisma 7 removed `url` from the schema and requires driver adapters + `prisma.config.ts`; do not bump to 7 without migrating that config.
 - **Demo accounts** (password `Password123!`): `admin@akc.dev` (ADMIN), `editor@akc.dev` (EDITOR), `member@akc.dev` (USER). The very first user to sign up becomes ADMIN.
 - **Roles/permissions** are defined in one place — `src/lib/permissions.ts` (`canEditContent` = EDITOR+, `canManageUsers` = ADMIN; `ROLE_CAPABILITIES` is the human-readable matrix shown on `/admin`). Content mutations live in `src/lib/actions/content-admin.ts` (guarded to EDITOR+); user management in `src/lib/actions/admin.ts` (ADMIN). Enforce permissions in the server action, not just the UI.
