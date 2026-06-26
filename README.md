@@ -1,17 +1,20 @@
 # AI Knowledge Center
 
-A rich, secure hub for your AI knowledge — **courses, skills, prompts, agents**, a **URL library**, favorites, private notes, tags, and search — behind user logins with **passkeys, authenticator (TOTP), and SMS 2FA**. Built with **Next.js 16**, **TypeScript**, **Tailwind CSS v4**, and **Prisma** (SQLite for local dev).
+A rich, secure hub for your AI knowledge — **courses, skills, prompts, agents**, a **URL library**, favorites, private notes, tags, and search — behind user logins with **passkeys, authenticator (TOTP), and SMS 2FA**. Built with **Next.js 16**, **TypeScript**, **Tailwind CSS v4**, and **Prisma** (PostgreSQL).
 
 ## Getting started
 
-You need [Node.js](https://nodejs.org/) 20+ installed.
+You need [Node.js](https://nodejs.org/) 20+ and a **PostgreSQL** database. The easiest hosted option is a free [Neon](https://neon.tech) or [Supabase](https://supabase.com) database — copy its connection string into `DATABASE_URL`.
 
 ```bash
+export DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require"
 npm install          # installs deps and generates the Prisma client
-npm run db:push      # creates the local SQLite database (prisma/dev.db)
-npm run db:seed      # loads demo users + content
+npm run db:push      # syncs the schema to your database
+npm run db:seed      # loads demo users + content (idempotent, non-destructive)
 npm run dev          # http://localhost:3000
 ```
+
+> Set `DATABASE_URL` in a `.env` file (git-ignored) or as an environment variable. Because the database is hosted, your data persists across restarts and deploys.
 
 ### Demo accounts (password: `Password123!`)
 
@@ -58,6 +61,7 @@ The **first account to ever sign up** becomes an Admin automatically.
 
 ## Going to production
 
-- Swap the Prisma datasource from SQLite to Postgres in `prisma/schema.prisma`.
+- The app already uses PostgreSQL — point `DATABASE_URL` at your production database.
 - Replace the SMS mock in `src/lib/actions/mfa.ts` with a real provider (e.g. Twilio).
 - Passkeys derive the Relying Party ID from the request host, so they work on your real domain automatically over HTTPS.
+- AI features need `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.

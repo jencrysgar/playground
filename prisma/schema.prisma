@@ -1,14 +1,14 @@
 // Prisma schema for the AI Knowledge Center.
-// Uses SQLite for zero-config local development. The database file lives at
-// prisma/dev.db. Swap the datasource provider/url for Postgres in production.
+// Uses PostgreSQL (hosted, e.g. Neon/Supabase) so data persists across
+// deploys and VM restarts. Set DATABASE_URL to your Postgres connection string.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ----- Users, auth & MFA -----

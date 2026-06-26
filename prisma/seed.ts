@@ -30,7 +30,7 @@ async function main() {
   for (const u of users) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: { name: u.name, role: u.role },
+      update: {}, // non-destructive: don't overwrite admin edits on re-seed
       create: { ...u, passwordHash },
     });
   }
@@ -47,7 +47,7 @@ async function main() {
   for (const t of tags) {
     await prisma.tag.upsert({
       where: { name: t.name },
-      update: { color: t.color },
+      update: {},
       create: t,
     });
   }
@@ -81,7 +81,7 @@ async function main() {
   };
   const course = await prisma.course.upsert({
     where: { slug: "prompt-engineering-foundations" },
-    update: courseData,
+    update: {},
     create: { slug: "prompt-engineering-foundations", ...courseData },
   });
   await assign("Beginner", "course", course.id);
@@ -130,7 +130,7 @@ async function main() {
   for (const m of modulesData) {
     const mod = await prisma.module.upsert({
       where: { courseId_slug: { courseId: course.id, slug: m.slug } },
-      update: { title: m.title, description: m.description, order: m.order },
+      update: {},
       create: {
         courseId: course.id,
         slug: m.slug,
@@ -142,7 +142,7 @@ async function main() {
     for (const l of m.lessons) {
       await prisma.lesson.upsert({
         where: { moduleId_slug: { moduleId: mod.id, slug: l.slug } },
-        update: { title: l.title, content: l.content, order: l.order },
+        update: {},
         create: {
           moduleId: mod.id,
           slug: l.slug,
@@ -198,7 +198,7 @@ async function main() {
   for (const s of skills) {
     const rec = await prisma.skill.upsert({
       where: { slug: s.slug },
-      update: s,
+      update: {},
       create: s,
     });
     await assign(s.slug === "code-review-assistant" ? "Coding" : "Productivity", "skill", rec.id);
@@ -247,7 +247,7 @@ async function main() {
   for (const p of prompts) {
     const rec = await prisma.prompt.upsert({
       where: { slug: p.slug },
-      update: p,
+      update: {},
       create: p,
     });
     await assign(p.slug === "sql-from-plain-english" ? "Coding" : "Writing", "prompt", rec.id);
@@ -277,7 +277,7 @@ async function main() {
   for (const a of agents) {
     const rec = await prisma.agent.upsert({
       where: { slug: a.slug },
-      update: a,
+      update: {},
       create: a,
     });
     await assign("Research", "agent", rec.id);
